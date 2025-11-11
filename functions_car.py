@@ -34,6 +34,8 @@ from sklearn.preprocessing import FunctionTransformer
 from IPython.display import display, Markdown
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import clone
+
 
 def preprocess_features_before_pipeline(df):
     """
@@ -309,7 +311,7 @@ def evaluate_models_cv_regression_safe_new(
         MSE = mean_squared_error(y, y_pred)
         RMSE = np.sqrt(MSE)
         R2 = r2_score(y, y_pred)
-        MAPE = np.mean(np.abs((y - y_pred) / np.maximum(y, 1e-8))) * 100
+        #MAPE = np.mean(np.abs((y - y_pred) / np.maximum(y, 1e-8))) * 100
         SMAPE = 100 * np.mean(2 * np.abs(y - y_pred) / (np.abs(y) + np.abs(y_pred) + 1e-8))
 
         all_metrics[name] = {
@@ -317,7 +319,7 @@ def evaluate_models_cv_regression_safe_new(
             "MSE": MSE,
             "RMSE": RMSE,
             "R2": R2,
-            "MAPE": MAPE,
+            #"MAPE": MAPE,
             "SMAPE": SMAPE
         }
 
@@ -325,12 +327,12 @@ def evaluate_models_cv_regression_safe_new(
         print(f"MSE:   {MSE:.2f}")
         print(f"MAE:   {MAE:.2f}")
         print(f"RMSE:  {RMSE:.2f}")
-        print(f"MAPE:  {MAPE:.2f}%")
+        #print(f"MAPE:  {MAPE:.2f}%")
         print(f"SMAPE: {SMAPE:.2f}%")
 
     # Таблица результатов
     df_results = pd.DataFrame(all_metrics).T
-    df_results = df_results[["MAE", "MSE", "RMSE", "R2", "MAPE", "SMAPE"]].sort_values(by="R2", ascending=False)
+    df_results = df_results[["MAE", "MSE", "RMSE", "R2","SMAPE"]].sort_values(by="R2", ascending=False)
 
     print("\n=== Сводная таблица метрик (усреднённые по CV) ===")
     print(df_results.to_string(float_format="%.4f"))
@@ -371,7 +373,7 @@ def compare_regression_metrics(df1, df2, name1="Variant 1", name2="Variant 2", p
 
     # Определяем направление улучшений
     better_higher = ["R2", "R2_CV"]
-    better_lower = ["MSE", "RMSE", "MAE", "MAPE", "SMAPE"]
+    better_lower = ["MSE", "RMSE", "MAE", "SMAPE"]
 
     trends = []
     for model in diff.index:
