@@ -97,9 +97,9 @@ def preprocess_features_before_pipeline(df):
 def prepare_regression_data(df, seed=42, test_size=0.2, verbose=True):
     """
     Полная предобработка данных для задачи регрессии.
-    Возвращает X, y, train/test split и предобработанные DataFrame с названиями признаков.
+    Исправленная версия без двойного импутирования.
     """
-    print("🔥 prepare_regression_data() called — CLEAN 8-VARIANT version")
+    print("🔥 prepare_regression_data() called — FIXED VERSION")
 
     df = df.copy()
 
@@ -178,50 +178,50 @@ def prepare_regression_data(df, seed=42, test_size=0.2, verbose=True):
         X_train[target_cols] = X_train[target_cols].fillna(global_mean)
         X_test[target_cols] = X_test[target_cols].fillna(global_mean)
 
-    # 8. ColumnTransformer
+    # 8. ColumnTransformer 
     preprocessor = ColumnTransformer(
         transformers=[
             ("one_hot", Pipeline([
                 ("imputer", SimpleImputer(strategy="most_frequent")),
                 ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False))
             ]), [col for col in cat_onehot if col in X_train.columns]),
-            ("num", SimpleImputer(strategy="median"), [
+            ("num", Pipeline([
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler())
+            ]), [
                 col for col in X_train.columns if col not in cat_onehot
             ]),
         ],
         remainder="drop"
     )
 
+    # 9. Трансформация данных 
     preprocessor.fit(X_train)
-    feature_names = preprocessor.get_feature_names_out(input_features=X_train.columns)
+    feature_names = preprocessor.get_feature_names_out()
 
-    X_train_pre = pd.DataFrame(preprocessor.transform(X_train),
-                               index=X_train.index,
-                               columns=feature_names)
-    X_test_pre = pd.DataFrame(preprocessor.transform(X_test),
-                              index=X_test.index,
-                              columns=feature_names)
+    X_train_preprocessed = pd.DataFrame(
+        preprocessor.transform(X_train),
+        index=X_train.index,
+        columns=feature_names
+    )
+    
+    X_test_preprocessed = pd.DataFrame(
+        preprocessor.transform(X_test),
+        index=X_test.index,
+        columns=feature_names
+    )
 
-    # 9. Финальная импьютация
-    imputer = SimpleImputer(strategy="most_frequent")
-    X_train_preprocessed = pd.DataFrame(imputer.fit_transform(X_train_pre),
-                                        index=X_train.index,
-                                        columns=feature_names)
-    X_test_preprocessed = pd.DataFrame(imputer.transform(X_test_pre),
-                                       index=X_test.index,
-                                       columns=feature_names)
+    # 10. Проверка - если здесь есть NaN, значит проблема в препроцессоре
+    assert not X_train_preprocessed.isna().any().any(), "NaN в X_train_preprocessed! Проверьте препроцессор"
+    assert not X_test_preprocessed.isna().any().any(), "NaN в X_test_preprocessed! Проверьте препроцессор"
 
-    # Проверка
-    assert not X_train_preprocessed.isna().any().any(), "NaN в X_train_preprocessed!"
-    assert not X_test_preprocessed.isna().any().any(), "NaN в X_test_preprocessed!"
-
-    # 10. Информационное сообщение
+    # 11. Информационное сообщение
     if verbose:
         display(Markdown(
             f"✅ **Preprocessing complete.**  \n"
             f"Train samples: **{len(X_train_preprocessed)}**, "
             f"Test samples: **{len(X_test_preprocessed)}**  \n"
-            f"Features: **{len(feature_names)}**"
+            f"Features: **{len(X_train_preprocessed.columns)}**"
         ))
     print("➡ RETURN executed with 8 values")
 
